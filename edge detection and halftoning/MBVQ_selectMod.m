@@ -1,0 +1,23 @@
+function Q = MBVQ_selectMod(r, g, b)
+    if((r+g)>255)
+        if((g+b)>255)
+            if((r+g+b)>510)
+                Q='CMYW';
+            else
+                Q='MYGC';
+            end
+        else
+            Q='RGMY';      
+        end
+    else
+        if(~((g+b)>255))
+            if(~((r+g+b)>255))
+                Q='KRGB';
+            else
+                Q='RGBM';
+            end
+        else
+            Q='CMGB';
+        end
+    end     
+end

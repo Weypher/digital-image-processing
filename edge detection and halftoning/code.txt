@@ -1,0 +1,574 @@
+writerawRGB.m
+function count = writerawRGB(G, filename)
+    G_shape=size(G);
+    if length(G_shape)>2
+        G=permute(G,[3,2,1]);
+    else
+        G=G';
+    end
+    fid = fopen(filename,'wb');
+    if (fid == -1)
+		error('can not open output image filem press CTRL-C to exit \n');
+		pause;
+    end
+    count = fwrite(fid,G, 'uchar');
+	fclose(fid);
+end %function
+
+threshold.m
+function G = threshold(matrix, row, col, percent)
+    ts = percent / 100 * 255;
+    for i = 1 : row
+        for j = 1 : col
+            if matrix(i, j) > ts
+                G(i, j) = 0;
+            else
+                G(i, j) = 255;
+            end
+        end
+    end
+end
+
+sobelGy.m
+function G = sobelGy(matrix, row, col)
+
+    max = 0;
+    for i = 1 : row
+        for j = 1 : col
+            n = 1 + i;
+            m = 1 + j;
+            G(i, j) = matrix(n - 1, m - 1) + matrix(n - 1, m + 1)...
+                       + 2 * matrix(n - 1, m) - 2 * matrix(n + 1, m)...
+                       - matrix(n + 1, m - 1) - matrix(n + 1, m + 1);
+            if G(i, j) < 0
+                G(i, j) = - G(i, j);
+            end
+            if G(i, j) > max
+                max = G(i, j);
+            end
+        end
+    end
+    
+    for i = 1 : row
+        for j = 1 : col
+            G(i, j) = G(i, j) / max * 255;
+        end
+    end
+end
+
+sobelGx.m
+function G = sobelGx(matrix, row, col)
+
+    max = 0;
+    for i = 1 : row
+        for j = 1 : col
+            n = 1 + i;
+            m = 1 + j;
+            G(i, j) = 0 - matrix(n - 1, m - 1) + matrix(n - 1, m + 1)...
+                       - 2 * matrix(n, m - 1) + 2 * matrix(n, m + 1)...
+                       - matrix(n + 1, m - 1) + matrix(n + 1, m + 1);
+            if G(i, j) < 0
+                G(i, j) = - G(i, j);
+            end
+            if G(i, j) > max
+                max = G(i, j);
+            end
+        end
+    end
+    
+    for i = 1 : row
+        for j = 1 : col
+            G(i, j) = G(i, j) / max * 255;
+        end
+    end
+end
+
+rgbToGray.m
+function G = rgbToGray(matrix, row, col)
+    for i = 1 : row
+        for j = 1 : col
+            G(i, j) = matrix(i, j, 1) * 0.2989 + matrix(i, j, 2) * 0.5870 + matrix(i, j, 3) * 0.1140;
+        end
+    end
+end
+
+rgbSeperate.m
+function [G1, G2, G3] = rgbSeperate(I, row, col)
+    for i = 1 : row
+        for j = 1 : col
+            G1(i, j) = I(i, j, 1);
+            G2(i, j) = I(i, j, 2);
+            G3(i, j) = I(i, j, 3);
+        end
+    end
+end
+
+rgb2cmy.m
+function G = rgb2cmy(I, row, col, channel)
+    for i = 1 : row
+        for j = 1 : col
+            for k = 1 : channel
+                G(i, j ,k) = 255 - I(i, j, k);
+            end
+        end
+    end
+end
+
+readraw.m
+function G = readraw(filename, row, col, bytesOfPixel)
+%readraw - read RAW format grey scale image of square size into matrix G
+% Usage:    G = readraw(filename)
+
+    disp([' Retrieving Image ' filename ' ...']);
+
+    % Get file ID for file
+    fid=fopen(filename,'rb');
+
+    % Check if file exists
+    if (fid == -1)
+        error('can not open input image file press CTRL-C to exit \n');
+        pause
+    end
+
+    % Get all the pixels from the image
+    pixel = fread(fid, inf, 'uchar');
+
+    % Close file
+    fclose(fid);
+
+%   % Calculate length/width, assuming image is square
+%   [Y X]=size(pixel);
+%   Size=(Y*X);
+%   N=sqrt(Size);
+
+    G = zeros(row, col, bytesOfPixel);
+    pos = 1;
+    
+    for i = 1 : row
+       for j = 1 : col
+           for k = 1 : bytesOfPixel
+               G(i, j, k) = pixel(pos);
+               pos = pos + 1;
+           end
+       end
+    end
+    
+    
+
+    % Construct matrix
+%   G = zeros(N,N);
+
+    % Write pixels into matrix
+%   G(1:Size) = pixel(1:Size);
+
+    % Transpose matrix, to orient it properly
+%   G = G';
+end %function
+
+
+randomdithering.m
+function G = RandomDithering(matrix, row, col)
+    for i = 1 : row
+        for j = 1 : col
+            rand = randi([0 255]);
+            if matrix(i, j) > rand
+                G(i, j) = 255;
+            else
+                G(i, j) = 0;
+            end
+        end
+    end
+end
+
+
+mergeRGB.m
+function G = mergeRGB(I1, I2, I3, row, col)
+    for i = 1 : row
+        for j = 1 : col
+            G(i, j, 1) = I1(i, j);
+            G(i, j, 2) = I2(i, j);
+            G(i, j, 3) = I3(i, j);
+        end 
+    end
+end
+
+
+MBVQ._vertex.m
+function G = MBVQ_vertex(name)
+    if (strcmp(name, 'white'))
+        G = [255,255,255];
+    elseif (strcmp(name, 'yellow'))
+        G = [255,255,0];
+    elseif (strcmp(name, 'magenta'))
+        G = [255, 0, 255];
+    elseif (strcmp(name, 'cyan'))
+        G = [0, 255, 255];
+    elseif (strcmp(name, 'red'))
+        G = [255, 0, 0];
+    elseif (strcmp(name, 'green'))
+        G = [0, 255, 0];
+    elseif (strcmp(name, 'blue'))
+        G = [0, 0, 255];
+    elseif (strcmp(name, 'black'))
+        G = [0, 0, 0];
+%     else
+%         G = [0, 0, 0];  
+    end
+end
+
+MBVQ_selectMod.m
+function Q = MBVQ_selectMod(r, g, b)
+    if((r+g)>255)
+        if((g+b)>255)
+            if((r+g+b)>510)
+                Q='CMYW';
+            else
+                Q='MYGC';
+            end
+        else
+            Q='RGMY';      
+        end
+    else
+        if(~((g+b)>255))
+            if(~((r+g+b)>255))
+                Q='KRGB';
+            else
+                Q='RGBM';
+            end
+        else
+            Q='CMGB';
+        end
+    end     
+end
+
+MBVQ.m
+function Y = MBVQ(I, row, col, DM, size)
+    I = double(I);
+    direction = 1;
+    j = 0;
+    Y = double(I);
+    error = zeros(row, col, size);
+    DMSize = (size + 1) / 2;
+    for i = 1 : row
+        j = j + direction
+        while (j > 0 && j <= col)
+            R = I(i, j, 1);
+            G = I(i, j, 2);
+            B = I(i, j, 3);
+            mode = MBVQ_selectMod(R, G, B);
+            nearestVertex = getNearestVertex(mode, (R+error(i, j, 1)) / 255, (G+error(i, j, 2)) / 255, (B+error(i, j, 3)) / 255);
+            vertex = MBVQ_vertex(nearestVertex);
+            curError = [R + error(i,j,1) - vertex(1), G + error(i,j,2) - vertex(2), B + error(i,j,3) - vertex(3)];
+            Y(i, j, 1) = vertex(1);
+            Y(i, j, 2) = vertex(2);
+            Y(i, j, 3) = vertex(3);
+            x = 1;
+            y = DMSize;
+            for n = 0 : DMSize - 1
+                for m = -(DMSize - 1) : (DMSize - 1)
+                    if (DM(x + n, y + m) ~= 0) && ((m + j) >= 1) && ((j + m) <= col) && ((i + n) <= row)
+                        error(i + n, j + m, 1) = error(i + n, j + m, 1) + curError(1) * DM(x + n, y + m * direction);
+                        error(i + n, j + m, 2) = error(i + n, j + m, 2) + curError(2) * DM(x + n, y + m * direction);
+                        error(i + n, j + m, 3) = error(i + n, j + m, 3) + curError(3) * DM(x + n, y + m * direction);
+                    end
+                end
+            end
+            j = j + direction;
+        end
+        direction = -direction;
+    end
+                
+end
+
+mag.m
+function G = mag(sobelX, sobelY, row, col)
+    max = 0;
+    for i = 1 : row
+        for j = 1 : col
+            G(i, j) = sqrt(sobelX(i, j) * sobelX(i, j) + sobelY(i, j) * sobelY(i, j));
+            if G(i, j) > max
+                max = G(i, j)
+            end
+        end
+    end
+    for i = 1 : row
+        for j = 1 : col
+            G(i, j) = G(i, j) / max * 255;
+        end
+    end
+end
+
+
+fixedDithering.m
+function G = fixedDithering(matrix, row, col, ts)
+    for i = 1 : row
+        for j = 1 : col
+            if matrix(i, j) > ts
+                G(i, j) = 255;
+            else
+                G(i, j) = 0;
+            end
+        end
+    end
+end
+
+
+errorDiffusion.m
+function b = errorDiffusion(I, row, col, DM, size)
+    direction = 1;
+    j = 0;
+    Image = double(I);
+    ts = 127;
+    DMSize = (size + 1) / 2;
+    b = zeros(row, col);
+    for i = 1 : row
+        j = j + direction;
+        while (j > 0 && j <= col)
+            if Image(i, j) < ts
+%                 error = G(i, j);
+%                 G(i, j) = 0;
+                b(i, j) = 0;
+            else
+%                 error = G(i, j) - 255;
+%                 G(i, j) = 255;
+                b(i, j) = 255;
+            end
+            error = Image(i, j) - b(i, j);
+            for n = 0 : DMSize - 1
+                for m = -(DMSize - 1) : (DMSize - 1)
+                    if (DM(n + 1, DMSize + m) ~= 0) && ((m + j) >= 1) && ((j + m) <= col) && ((i + n) <= row)
+                        Image(i + n, j + m) = Image(i + n, j + m) + error * DM(n+1, m+DMSize);
+                    end
+                end
+            end
+            j = j + direction;
+        end
+        direction = -direction;
+    end
+                
+end
+
+edgeFix.m
+function G = edgeFix(matrix, row, col)
+    for i = 1 : col
+        G(1, i + 1) = matrix(1, i);
+        G(2 + row, i + 1) = matrix(row, i);
+    end
+    for i = 2 : row + 1
+        for j = 2 : col + 1
+            G(i, j) = matrix(i - 1, j - 1);
+        end
+    end
+    
+    for i = 1 : row + 2
+        G(i, 1) = G(i, 2);
+        G(i, col + 2) = G(i, col + 1);
+    end
+end
+
+edgeDetectionGallery.m
+col = 481;
+row = 321;
+
+oriRGB = readraw('./EE569_Spring_2020_HW2_Materials/Problem1/Gallery.raw', row, col, 3);
+
+gray = rgbToGray(oriRGB, row, col);
+fixedBound = edgeFix(gray, row, col);
+sobelX = sobelGx(fixedBound, row, col);
+sobelY = sobelGy(fixedBound, row, col);
+
+magn = mag(sobelX, sobelY, row, col);
+ts = threshold(magn, row, col, 25);
+
+
+x = uint8(sobelX);
+y = uint8(sobelY);
+res = uint8(ts);
+
+
+intGray = uint8(gray);
+BW = edge(intGray, 'canny', [0.2 0.4]);
+
+figure();
+imshow(x);
+filename_save = "./result/gallery_sobelX.raw";
+count = writeraw(x, filename_save);
+
+figure();
+imshow(y);
+filename_save = "./result/gallery_sobelY.raw";
+count = writeraw(y, filename_save);
+
+
+figure();
+imshow(res);
+filename_save = "./result/gallery_res.raw";
+count = writeraw(res, filename_save);
+
+
+figure();
+imshow(BW);
+filename_save = "./result/gallery_canny.raw";
+count = writeraw(BW, filename_save);
+
+k = edge(intGray, 'canny', [0.2 0.4]);
+figure();
+imshow(k);
+
+edgeDetectionDog.m
+col = 481;
+row = 321;
+
+oriRGB = readraw('./EE569_Spring_2020_HW2_Materials/Problem1/Dogs.raw', row, col, 3);
+
+gray = rgbToGray(oriRGB, row, col);
+fixedBound = edgeFix(gray, row, col);
+sobelX = sobelGx(fixedBound, row, col);
+sobelY = sobelGy(fixedBound, row, col);
+
+magn = mag(sobelX, sobelY, row, col);
+ts = threshold(magn, row, col, 30);
+
+
+x = uint8(sobelX);
+y = uint8(sobelY);
+res = uint8(ts);
+
+
+intGray = uint8(gray);
+BW = edge(intGray, 'canny', [0.16 0.4]);
+
+
+figure();
+imshow(x);
+filename_save = "./result/dog_sobelX.raw";
+count = writeraw(x, filename_save);
+
+figure();
+imshow(y);
+filename_save = "./result/dog_sobelY.raw";
+count = writeraw(y, filename_save);
+
+figure();
+imshow(res);
+filename_save = "./result/dog_res.raw";
+count = writeraw(res, filename_save);
+
+figure();
+imshow(BW);
+filename_save = "./result/dog_canny.raw";
+count = writeraw(BW, filename_save);
+
+k = edge(intGray, 'canny', [0.2 0.4]);
+figure();
+imshow(k);
+
+
+ditheringMatrix.m
+function G = ditheringMatrix(matrix, row, col, N)
+    mul = log2(N);
+    
+    I = [1 2; 3 0];
+    if mul > 1
+       for i = 1 : mul - 1
+          I = [(4*I+1) (4*I+2); (4*I+3) 4*I];
+       end
+    end
+    T = (I + 0.5) * (255/(N ^ 2));
+
+    for i = 1 : row
+        for j = 1 : col
+            if matrix(i, j) > T(mod(i, N)+1, mod(j, N)+1)
+                G(i, j) = 255;
+            else
+                G(i, j) = 0;
+            end
+        end
+    end
+end
+
+halftoning.m
+row = 500;
+col = 750;
+oriPic = readraw('./EE569_Spring_2020_HW2_Materials/Problem2/LightHouse.raw', row, col, 1);
+intPic = doubleToInt(oriPic, row, col, 1);
+
+%%Fixed thresholding
+fixDitherPic = fixedDithering(intPic, row, col, 128);
+% figure();
+% imshow(fixDitherPic);
+filename_save = "./result/fixedDithering_res.raw";
+count = writeraw(fixDitherPic, filename_save);
+
+%%Random thresholding
+ranDitherPic = RandomDithering(intPic, row, col);
+% figure();
+% imshow(ranDitherPic);
+filename_save = "./result/randomDithering_res.raw";
+count = writeraw(ranDitherPic, filename_save);
+
+%%Dithering Matrix
+ditheringMatrixPic2 = ditheringMatrix(intPic, row, col, 2);
+ditheringMatrixPic8 = ditheringMatrix(intPic, row, col, 8);
+ditheringMatrixPic32 = ditheringMatrix(intPic, row, col, 32);
+% figure();
+% imshow(ditheringMatrixPic2);
+% figure();
+% imshow(ditheringMatrixPic8);
+% figure();
+% imshow(ditheringMatrixPic32);
+filename_save = "./result/ditheringMatrixPic2.raw";
+count = writeraw(ditheringMatrixPic2, filename_save);
+filename_save = "./result/ditheringMatrixPic8.raw";
+count = writeraw(ditheringMatrixPic8, filename_save);
+filename_save = "./result/ditheringMatrixPic32.raw";
+count = writeraw(ditheringMatrixPic32, filename_save);
+
+%%Error Diffusion
+Floyd = [0,0,7;3,5,1]/16;
+JJN=[0,0,0,7,5;3,5,7,5,3;1,3,5,3,1]/48;
+Stucki=[0,0,0,8,4;2,4,8,4,2;1,2,4,2,1]/42;
+errorDiffusion1 = errorDiffusion(intPic, row, col, Floyd, 3);
+errorDiffusion2 = errorDiffusion(intPic, row, col, JJN, 5);
+errorDiffusion3 = errorDiffusion(intPic, row, col, Stucki, 5);
+figure();
+imshow(errorDiffusion1);
+figure();
+imshow(errorDiffusion2);
+figure();
+imshow(errorDiffusion3);
+filename_save = "./result/errorDiffusionFloyd.raw";
+count = writeraw(errorDiffusion1, filename_save);
+filename_save = "./result/errorDiffusionJJN.raw";
+count = writeraw(errorDiffusion2, filename_save);
+filename_save = "./result/errorDiffusionStucki.raw";
+count = writeraw(errorDiffusion3, filename_save);
+
+%%Color Half-toning with Error Diffusion
+%Separable Error Diffusion
+roseRow = 480;
+roseCol = 640;
+rosergb = readraw('./EE569_Spring_2020_HW2_Materials/Problem2/Rose.raw', roseRow, roseCol, 3);
+intRoseRgb = doubleToInt(rosergb, roseRow, roseCol, 3);
+rose_cmy = rgb2cmy(intRoseRgb, roseRow, roseCol, 3);
+[I1, I2, I3] = rgbSeperate(intRoseRgb, roseRow, roseCol);
+errorDiffusionI1 = errorDiffusion(I1, roseRow, roseCol, Floyd, 3);
+errorDiffusionI2 = errorDiffusion(I2, roseRow, roseCol, Floyd, 3);
+errorDiffusionI3 = errorDiffusion(I3, roseRow, roseCol, Floyd, 3);
+rose_cmy_diffusion = mergeRGB(errorDiffusionI1, errorDiffusionI2, errorDiffusionI3, roseRow, roseCol);
+figure();
+imshow(uint8(rose_cmy_diffusion));
+rose_rgb_ed = rgb2cmy(rose_cmy_diffusion, roseRow, roseCol, 3);
+rose_res_ed = uint8(rose_rgb_ed)
+figure();
+imshow(rose_res_ed);
+filename_save = "./result/rose_error_diffusion.raw";
+count = writerawRGB(rose_res_ed, filename_save);
+
+%MBVQ
+rose_MBVQ = MBVQ(intRoseRgb, roseRow, roseCol, Floyd, 3);
+[test1, test2, test3] = rgbSeperate(rose_MBVQ, roseRow, roseCol);
+figure();
+imshow(rose_MBVQ);
+filename_save = "./result/rose_MBVQ.raw";
+count = writerawRGB(rose_MBVQ, filename_save);
